@@ -31,6 +31,7 @@ function handleDisconnect() {
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || 'Melekirem14.',
         database: process.env.DB_NAME || 'benchmark_db',
+        ssl: { rejectUnauthorized: false },
         port: process.env.DB_PORT || 3306
     };
 
