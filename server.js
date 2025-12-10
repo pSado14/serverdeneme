@@ -501,6 +501,7 @@ app.post('/forgot-password', (req, res) => {
 
         transporter.sendMail(mailOptions, (error, info) => {
             if (error) {
+                console.error("EMAIL HATASI:", error.message);
                 console.log(`🔑 DOĞRULAMA KODU: ${code}`);
                 return res.status(200).json({ success: true, message: "E-posta gönderilemedi (Simülasyon)." });
             }
