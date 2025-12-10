@@ -404,10 +404,8 @@ app.post('/payment/initialize', (req, res) => {
         const reqId = requestId ? String(requestId) : '0';
         const conversationId = reqId.replace(/[^0-9]/g, '') || '0';
 
-        // Sanitize usernames - sadece alfanumerik karakterler
-        const safeSender = senderUsername.replace(/[^a-zA-Z0-9]/g, '');
-        const safeReceiver = receiver.replace(/[^a-zA-Z0-9]/g, '');
-        const metadata = `DONATION${safeSender}${safeReceiver}${Date.now()}${reqId}`;
+        // BasketId formatı: DONATION_requestId_timestamp (parse edilebilir format)
+        const metadata = `DONATION_${reqId}_${Date.now()}`;
 
         const priceStr = price ? price.toString() : '0';
 
@@ -551,12 +549,18 @@ app.post('/payment/callback', (req, res) => {
             const basketId = result.basketId || "";
             const amount = parseFloat(result.paidPrice);
 
-            // conversationId = requestId (sadece sayılar, sanitize edilmiş)
-            const requestId = result.conversationId;
+            // BasketId formatı: DONATION_requestId_timestamp - requestId'yi parse et
+            let requestId = null;
+            if (basketId.startsWith('DONATION_')) {
+                const parts = basketId.split('_');
+                if (parts.length >= 2) {
+                    requestId = parts[1]; // DONATION_3_1234567890 -> "3"
+                }
+            }
 
             logToFile(`Bağış alındı. Tutar: ${amount}, RequestID: ${requestId}`);
 
-            if (basketId.startsWith('DONATION') && requestId && requestId !== '0') {
+            if (requestId && requestId !== '0') {
                 // Veritabanında bağış isteğinin collected_amount'unu güncelle
                 const updateSql = "UPDATE donation_requests SET collected_amount = collected_amount + ? WHERE id = ?";
                 db.query(updateSql, [amount, requestId], (dbErr, dbResult) => {
