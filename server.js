@@ -6,6 +6,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
@@ -144,6 +145,9 @@ const transporter = nodemailer.createTransport({
         pass: process.env.EMAIL_PASS
     }
 });
+
+// --- RESEND CLIENT ---
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // --- BAĞIŞ İSTEĞİ OLUŞTURMA API ---
 app.post('/create-donation-request', (req, res) => {
@@ -501,16 +505,23 @@ app.post('/forgot-password', (req, res) => {
             text: `Doğrulama kodunuz: ${code}`
         };
 
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.error("EMAIL HATASI:", error.message);
-                console.log(`🔑 DOĞRULAMA KODU: ${code}`);
-                return res.status(200).json({ success: true, message: "E-posta gönderilemedi (Simülasyon)." });
-            }
+        // Resend ile email gönder
+        resend.emails.send({
+            from: 'Techbench <onboarding@resend.dev>',
+            to: email,
+            subject: 'Techbench Şifre Sıfırlama Kodu',
+            text: `Doğrulama kodunuz: ${code}`
+        }).then((data) => {
+            console.log("EMAIL GÖNDERİLDİ:", data);
             res.status(200).json({ success: true, message: "Doğrulama kodu gönderildi." });
+        }).catch((error) => {
+            console.error("RESEND HATASI:", error);
+            console.log(`🔑 DOĞRULAMA KODU: ${code}`);
+            res.status(200).json({ success: true, message: "E-posta gönderilemedi (Simülasyon)." });
         });
     });
 });
+
 
 // --- ŞİFRE SIFIRLAMA API ---
 app.post('/reset-password', (req, res) => {
